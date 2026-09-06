@@ -23,6 +23,7 @@ export type AuditAction =
   | "set_role"
   | "edit_agent"
   | "credit_adjust"
+  | "username_change"
   | "setting_change"
   | "banned_word_add"
   | "banned_word_remove"

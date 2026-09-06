@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { maskUsername } from "../mask";
+import { USERNAME_COOLDOWN_DAYS, usernameCooldownDaysLeft, usernameSchema } from "../validation";
 import { calcFee, DEFAULT_FEE_TIERS, validateFeeTiers } from "../fee";
 import { creditForDeal } from "../credit";
 import { findBannedWord } from "../banned-words";
@@ -85,5 +86,34 @@ describe("renderTitle 标题模板", () => {
     expect(renderTitle(MC_TITLE_TEMPLATE, { rank: "MVP+", level: 120, ign: "Baozisama" })).toBe(
       "MVP+ · 120 级 · Baozisama",
     );
+  });
+});
+
+describe("用户名改名规则（大纲第 2 节）", () => {
+  const day = 86_400_000;
+  const now = new Date("2026-09-06T12:00:00Z");
+
+  it("从没改过时随时能改", () => {
+    expect(usernameCooldownDaysLeft(null, now)).toBe(0);
+  });
+  it("满 30 天后能改", () => {
+    expect(usernameCooldownDaysLeft(new Date(now.getTime() - USERNAME_COOLDOWN_DAYS * day), now)).toBe(0);
+    expect(usernameCooldownDaysLeft(new Date(now.getTime() - 31 * day), now)).toBe(0);
+  });
+  it("刚改完要等满 30 天", () => {
+    expect(usernameCooldownDaysLeft(now, now)).toBe(USERNAME_COOLDOWN_DAYS);
+    expect(usernameCooldownDaysLeft(new Date(now.getTime() - 29 * day), now)).toBe(1);
+  });
+  it("不足一天的余量向上取整成 1 天，不会显示 0 天却仍被拒", () => {
+    expect(usernameCooldownDaysLeft(new Date(now.getTime() - (30 * day - 60_000)), now)).toBe(1);
+  });
+
+  it("长度与字符集按大纲：2～16 字，中英文数字下划线", () => {
+    expect(usernameSchema.safeParse("包子").success).toBe(true);
+    expect(usernameSchema.safeParse("Baozi_2026").success).toBe(true);
+    expect(usernameSchema.safeParse("a").success).toBe(false);
+    expect(usernameSchema.safeParse("a".repeat(17)).success).toBe(false);
+    expect(usernameSchema.safeParse("包子 sama").success).toBe(false);
+    expect(usernameSchema.safeParse("baozi@qq").success).toBe(false);
   });
 });

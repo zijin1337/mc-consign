@@ -11,7 +11,7 @@ const PAGE = 50;
 const ACTIONS = [
   "view_contact", "review_approve", "review_reject", "edit_listing", "delete_listing", "restore_listing", "force_off_shelf",
   "set_weight", "set_pinned", "assign_order", "cancel_order", "ban_user", "unban_user", "set_role", "edit_agent",
-  "credit_adjust", "setting_change", "banned_word_add", "banned_word_remove", "risk_flag", "wanted_remove", "wanted_restore",
+  "credit_adjust", "username_change", "setting_change", "banned_word_add", "banned_word_remove", "risk_flag", "wanted_remove", "wanted_restore",
 ];
 
 export default async function LogsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {

@@ -54,7 +54,10 @@ async function MeBody({ user }: { user: SafeUser }) {
               { label: "注册时间", value: formatDate(user.createdAt) },
             ]}
           />
-          <div className="mt-4 text-sm">
+          <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            <Link href="/me/username" className="link">
+              修改用户名
+            </Link>
             <Link href="/me/password" className="link">
               修改密码
             </Link>
@@ -282,6 +285,7 @@ export default async function MePage({ searchParams }: { searchParams: Promise<R
       {sp.updated && <Alert kind="success">修改已保存。</Alert>}
       {typeof sp.error === "string" && sp.error && <Alert kind="warn">{sp.error.slice(0, 200)}</Alert>}
       {sp.password && <Alert kind="success">密码已修改，其他设备已退出登录。</Alert>}
+      {sp.username && <Alert kind="success">用户名已修改。</Alert>}
 
       <Suspense
         fallback={

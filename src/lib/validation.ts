@@ -8,6 +8,19 @@ export const usernameSchema = z
   .max(16, "用户名最多 16 字")
   .regex(/^[\p{L}\p{N}_]+$/u, "用户名只能包含中英文、数字和下划线");
 
+/** 大纲第 2 节：用户名 30 天只能改一次 */
+export const USERNAME_COOLDOWN_DAYS = 30;
+
+/**
+ * 距下次可改还剩几天。0 表示现在就能改，从没改过（null）也是 0。
+ * 向上取整，避免不足一天的余量显示成 0 天却仍被拒。
+ */
+export function usernameCooldownDaysLeft(changedAt: Date | null, now: Date = new Date()): number {
+  if (!changedAt) return 0;
+  const left = USERNAME_COOLDOWN_DAYS - (now.getTime() - changedAt.getTime()) / 86_400_000;
+  return left <= 0 ? 0 : Math.ceil(left);
+}
+
 export const passwordSchema = z.string().min(8, "密码至少 8 位").max(64, "密码最多 64 位");
 
 export const qqSchema = z

@@ -951,6 +951,45 @@ async function main() {
   check("手机端求购大厅首屏内能看到求购卡", !!firstWantedCard && firstWantedCard.y < 844, `y=${firstWantedCard?.y}`);
   await mobile.screenshot({ path: `${SHOT_DIR}/mobile-wanted.png`, fullPage: true });
 
+  // ---- SEO 文件（大纲第 13 节：站点地图是百度 SEO 的前置条件）----
+  const robotsRes = await guest.request.get(`${BASE}/robots.txt`);
+  const robotsTxt = await robotsRes.text();
+  check("robots.txt 可访问且屏蔽了需登录的区", robotsRes.ok() && robotsTxt.includes("Disallow: /admin") && robotsTxt.includes("Disallow: /me"));
+  check("robots.txt 指向站点地图", robotsTxt.includes("Sitemap: ") && robotsTxt.trimEnd().endsWith("/sitemap.xml"), robotsTxt.slice(-60));
+  const sitemapRes = await guest.request.get(`${BASE}/sitemap.xml`);
+  const sitemapXml = await sitemapRes.text();
+  check("sitemap 收录公开页", sitemapRes.ok() && sitemapXml.includes("/sold") && sitemapXml.includes("/wanted"));
+  check("sitemap 不收录需登录的详情页", !sitemapXml.includes("/listings/"));
+
+  // ---- 改用户名（大纲第 2 节：过违禁词、唯一、30 天一次、留痕）----
+  // 买家改完必须用 SQL 改回去：cleanup-e2e.sql 按 ^买家[0-9]{6}$ 匹配测试用户，改了名就清理不到
+  const buyerId = Number((await pg.query("select id from users where username = $1", [buyerName])).rows[0].id);
+  await buyer.goto(`${BASE}/me/username`);
+  await buyer.fill('input[name="username"]', "黑号中介");
+  await buyer.getByRole("button", { name: "保存新用户名" }).click();
+  await buyer.getByText("违禁词").waitFor({ timeout: 15000 }).catch(() => {});
+  check("改名过违禁词库", ((await buyer.textContent("main")) ?? "").includes("违禁词"));
+  await buyer.fill('input[name="username"]', "ADMIN");
+  await buyer.getByRole("button", { name: "保存新用户名" }).click();
+  await buyer.getByText("用户名已被使用").waitFor({ timeout: 15000 }).catch(() => {});
+  check("改名重名（忽略大小写）被拒", ((await buyer.textContent("main")) ?? "").includes("用户名已被使用"));
+  const renamed = `买家改${STAMP}`;
+  await buyer.fill('input[name="username"]', renamed);
+  await buyer.getByRole("button", { name: "保存新用户名" }).click();
+  await buyer.waitForURL((u) => u.searchParams.get("username") === "1", { timeout: 30000 });
+  check("改名成功并回到「我的」", ((await buyer.textContent("main")) ?? "").includes(renamed));
+  const renameLog = await pg.query("select before, after from audit_logs where operator_id = $1 and action = $2", [buyerId, "username_change"]);
+  check("改名留痕（含改前改后）", renameLog.rowCount === 1 && renameLog.rows[0].before?.username === buyerName && renameLog.rows[0].after?.username === renamed);
+  await buyer.goto(`${BASE}/me/username`);
+  check("冷却期内表单禁用并提示剩余天数", ((await buyer.textContent("main")) ?? "").includes("距离下次可改还有 30 天") && (await buyer.locator('input[name="username"][disabled]').count()) === 1);
+  await buyer.evaluate(() => document.querySelectorAll<HTMLElement>("form [disabled]").forEach((el) => el.removeAttribute("disabled")));
+  await buyer.fill('input[name="username"]', `再改${STAMP}`);
+  await buyer.getByRole("button", { name: "保存新用户名" }).click();
+  await buyer.getByText("还需").waitFor({ timeout: 15000 }).catch(() => {});
+  check("绕过前端禁用后服务端仍拒绝", ((await buyer.textContent("main")) ?? "").includes("天只能改一次"));
+  await pg.query("update users set username = $1, username_changed_at = null where id = $2", [buyerName, buyerId]);
+  await pg.query("delete from audit_logs where operator_id = $1 and action = $2", [buyerId, "username_change"]);
+
   const flushed = await pg.query("select count(*)::int as pending, count(*) filter (where sent_at is not null)::int as sent from mail_outbox");
   check("通知邮件经发件箱发出（console 模式也计已发）", flushed.rows[0].sent > 0 && flushed.rows[0].pending - flushed.rows[0].sent <= 20, JSON.stringify(flushed.rows[0]));
   await pg.query("update users set password_hash = $1, password_changed_at = now() where username = 'admin'", [await hashPassword(ADMIN_DEFAULT)]);
