@@ -951,7 +951,7 @@ async function main() {
   check("手机端求购大厅首屏内能看到求购卡", !!firstWantedCard && firstWantedCard.y < 844, `y=${firstWantedCard?.y}`);
   await mobile.screenshot({ path: `${SHOT_DIR}/mobile-wanted.png`, fullPage: true });
 
-  // ---- SEO 文件（大纲第 13 节：站点地图是百度 SEO 的前置条件）----
+  // ---- SEO 文件（站点地图是百度 SEO 的前置条件）----
   const robotsRes = await guest.request.get(`${BASE}/robots.txt`);
   const robotsTxt = await robotsRes.text();
   check("robots.txt 可访问且屏蔽了需登录的区", robotsRes.ok() && robotsTxt.includes("Disallow: /admin") && robotsTxt.includes("Disallow: /me"));
@@ -961,7 +961,7 @@ async function main() {
   check("sitemap 收录公开页", sitemapRes.ok() && sitemapXml.includes("/sold") && sitemapXml.includes("/wanted"));
   check("sitemap 不收录需登录的详情页", !sitemapXml.includes("/listings/"));
 
-  // ---- 改用户名（大纲第 2 节：过违禁词、唯一、30 天一次、留痕）----
+  // ---- 改用户名（过违禁词、唯一、30 天一次、留痕）----
   // 买家改完必须用 SQL 改回去：cleanup-e2e.sql 按 ^买家[0-9]{6}$ 匹配测试用户，改了名就清理不到
   const buyerId = Number((await pg.query("select id from users where username = $1", [buyerName])).rows[0].id);
   await buyer.goto(`${BASE}/me/username`);

@@ -70,7 +70,7 @@ export async function sendTestMail(): Promise<void> {
 }
 
 /**
- * 改用户名。大纲第 2 节：2～16 字、过违禁词、忽略大小写全局唯一、30 天一次、留痕。
+ * 改用户名：2～16 字、过违禁词、忽略大小写全局唯一、30 天一次、留痕。
  * 冷却期和重名都重新查库，不信任页面传来的状态。
  */
 export async function changeUsername(_prev: FormState, form: FormData): Promise<FormState> {

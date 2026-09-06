@@ -89,7 +89,7 @@ describe("renderTitle 标题模板", () => {
   });
 });
 
-describe("用户名改名规则（大纲第 2 节）", () => {
+describe("用户名改名规则", () => {
   const day = 86_400_000;
   const now = new Date("2026-09-06T12:00:00Z");
 

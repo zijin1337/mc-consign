@@ -1,6 +1,6 @@
 # 方块寄售平台
 
-Minecraft / Hypixel 正版账号寄售信息平台。产品大纲与数据模型见 `docs/`。
+Minecraft / Hypixel 正版账号寄售信息平台。数据模型与开发记录见 `docs/`。
 
 ## 技术栈
 
@@ -38,7 +38,7 @@ SMTP 留空时验证码直接打印到 `pnpm dev` 的终端，方便本地注册
 ## 目录
 
 ```
-docs/            产品大纲、数据模型
+docs/            数据模型、开发记录、文案规范
 drizzle/         SQL 迁移
 scripts/         本地数据库、seed、e2e
 src/db/          Drizzle schema 与连接

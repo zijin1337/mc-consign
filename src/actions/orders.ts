@@ -19,7 +19,7 @@ import { formValues, type FormState } from "./types";
 
 const { orders, listings, users, creditLogs, aftersales, bannedWords } = schema;
 const OPEN = [...OPEN_ORDER_STATUSES];
-/** 大纲第 7 节：同一对买卖双方 30 天内成交达到这个次数就标记异常提醒超管 */
+/** 同一对买卖双方 30 天内成交达到这个次数就标记异常提醒超管 */
 const REPEAT_DEAL_LIMIT = 3;
 const REPEAT_DEAL_WINDOW_MS = 30 * 86400_000;
 

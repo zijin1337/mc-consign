@@ -8,7 +8,7 @@ export const usernameSchema = z
   .max(16, "用户名最多 16 字")
   .regex(/^[\p{L}\p{N}_]+$/u, "用户名只能包含中英文、数字和下划线");
 
-/** 大纲第 2 节：用户名 30 天只能改一次 */
+/** 用户名 30 天只能改一次 */
 export const USERNAME_COOLDOWN_DAYS = 30;
 
 /**
