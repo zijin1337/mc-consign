@@ -1,0 +1,92 @@
+# 生产部署：docker compose --env-file .env.production up -d --build
+# 服务：db（PostgreSQL 17）→ migrate（迁移 + 种子，跑完即退）→ app（Next.js）→ caddy（自动 HTTPS）；backup 每天备份。
+# 变量来自 .env.production（同时用于 ${...} 插值与容器 env_file），模板见 .env.production.example。
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mc}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请在 .env.production 里设置 POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-mc_consign}
+      TZ: Asia/Shanghai
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mc} -d ${POSTGRES_DB:-mc_consign}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      target: migrator
+    env_file: .env.production
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    build:
+      context: .
+      target: runner
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      UPLOAD_DIR: /data/uploads
+      HOSTNAME: 0.0.0.0
+      PORT: "3000"
+    volumes:
+      - uploads:/data/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?请在 .env.production 里设置 DOMAIN（测试期可填 :80）}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+  backup:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      PGHOST: db
+      PGUSER: ${POSTGRES_USER:-mc}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB:-mc_consign}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      TZ: Asia/Shanghai
+    volumes:
+      - ./deploy/backup.sh:/backup.sh:ro
+      - ./backups:/backups
+      - uploads:/data/uploads:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    # 启动先备份一次，之后每天凌晨 4 点
+    command: ["sh", "-c", "sh /backup.sh; while true; do sleep $$(( ( (4*3600) - ($$(date +%s) + 8*3600) % 86400 + 86400 ) % 86400 )); sh /backup.sh; done"]
+
+volumes:
+  pgdata:
+  uploads:
+  caddy_data:
+  caddy_config:

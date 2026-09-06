@@ -1,0 +1,14 @@
+node_modules
+.next
+.next-e2e
+.local
+uploads
+backups
+data
+.git
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
+docs
+README.md

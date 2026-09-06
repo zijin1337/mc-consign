@@ -1,0 +1,30 @@
+# DOMAIN 来自 .env.production。正式域名（例如 example.com）会自动申请 Let's Encrypt 证书；
+# 没有域名先用 IP 测试时填 DOMAIN=:80，只走 HTTP。
+{$DOMAIN} {
+	encode zstd gzip
+
+	# 单张截图上限 5MB，留余量；Server Action 自身限制 2MB
+	request_body {
+		max_size 12MB
+	}
+
+	header {
+		-Server
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	}
+
+	# 上传图与皮肤图允许浏览器长缓存，其余交给应用自己的 Cache-Control
+	@static path /uploads/* /skin/* /_next/static/*
+	header @static Cache-Control "public, max-age=86400"
+
+	reverse_proxy app:3000 {
+		header_up X-Real-IP {remote_host}
+	}
+
+	log {
+		output file /data/access.log {
+			roll_size 50MiB
+			roll_keep 5
+		}
+	}
+}

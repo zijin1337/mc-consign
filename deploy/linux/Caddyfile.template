@@ -1,0 +1,35 @@
+# install.sh 会把 __DOMAIN__ 替换成 .env.production 里的域名后写到 /etc/caddy/Caddyfile。
+# 正式域名自动申请 Let's Encrypt 证书；备案前用 IP 测试写 :80 只走 HTTP。
+# 改完记得：caddy validate --config /etc/caddy/Caddyfile && systemctl reload caddy
+__DOMAIN__ {
+	encode zstd gzip
+
+	# 单张截图上限 5MB，留余量；Server Action 自身限制 2MB
+	request_body {
+		max_size 12MB
+	}
+
+	header {
+		-Server
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	}
+
+	# 上传图、皮肤图、静态资源允许浏览器长缓存，其余交给应用自己的 Cache-Control
+	@static path /uploads/* /skin/* /_next/static/*
+	header @static Cache-Control "public, max-age=86400"
+
+	reverse_proxy 127.0.0.1:3000 {
+		# 每 30 秒探活一次；应用借这个请求顺带刷邮件发件箱
+		health_uri /api/health
+		health_interval 30s
+		health_timeout 5s
+		header_up X-Real-IP {remote_host}
+	}
+
+	log {
+		output file /var/log/caddy/access.log {
+			roll_size 50MiB
+			roll_keep 5
+		}
+	}
+}
